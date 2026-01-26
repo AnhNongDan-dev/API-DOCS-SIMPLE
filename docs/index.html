@@ -1,22 +1,12 @@
 <!doctype html>
-<html lang="en">
+<html>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Meeting API Docs</title>
-    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
+    <title>School API Docs</title>
   </head>
   <body>
-    <div id="swagger-ui"></div>
-
-    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
-    <script>
-      window.onload = () => {
-        SwaggerUIBundle({
-          url: "./openapi.yaml",
-          dom_id: "#swagger-ui"
-        });
-      };
-    </script>
+    <script id="api-reference" data-url="./openapi.bundle.yaml"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
   </body>
 </html>

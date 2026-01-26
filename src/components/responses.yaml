@@ -1,0 +1,23 @@
+BadRequest:
+  description: Bad request
+  content:
+    application/json:
+      schema:
+        $ref: ./schemas/error.yaml#/ErrorResponse
+      examples:
+        sample:
+          value:
+            code: "VALIDATION_ERROR"
+            message: "name is required"
+
+NotFound:
+  description: Not found
+  content:
+    application/json:
+      schema:
+        $ref: ./schemas/error.yaml#/ErrorResponse
+      examples:
+        sample:
+          value:
+            code: "NOT_FOUND"
+            message: "Class not found"

@@ -1,0 +1,43 @@
+classes:
+  post:
+    tags: [Classes]
+    summary: Create a class (with students)
+    operationId: createClass
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/class.yaml#/CreateClassRequest
+    responses:
+      "201":
+        description: Created
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/class.yaml#/ClassDetail
+      "400":
+        $ref: ../components/responses.yaml#/BadRequest
+
+classById:
+  get:
+    tags: [Classes]
+    summary: Get class detail
+    operationId: getClassById
+    parameters:
+      - in: path
+        name: classId
+        required: true
+        schema:
+          type: integer
+          format: int64
+          example: 1
+    responses:
+      "200":
+        description: OK
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/class.yaml#/ClassDetail
+      "404":
+        $ref: ../components/responses.yaml#/NotFound
