@@ -1,9 +1,12 @@
 openapi: 3.0.3
 info:
   title: Meeting API (Demo)
-  version: 0.1.0
+  version: 0.2.0
+
 servers:
   - url: https://api.example.com
+  - url: http://localhost:8080
+
 paths:
   /health:
     get:
@@ -19,19 +22,360 @@ paths:
                   status:
                     type: string
                     example: ok
+
   /meetings:
     post:
-      summary: Create meeting
+      summary: Create meeting (deep request/response)
+      operationId: createMeeting
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required: [title]
-              properties:
-                title:
-                  type: string
+              $ref: "#/components/schemas/CreateMeetingRequest"
+            examples:
+              sample:
+                value:
+                  title: "Họp tuần"
+                  startTime: "2026-02-02T09:00:00+07:00"
+                  endTime: "2026-02-02T10:30:00+07:00"
+                  location: "Phòng họp A"
+                  description: "Họp rà soát tiến độ"
+                  participants:
+                    - userId: 11
+                      roleInMeeting: "CHAIR"
+                    - userId: 22
+                      roleInMeeting: "SECRETARY"
+                    - userId: 33
+                      roleInMeeting: "MEMBER"
+                  agendaItems:
+                    - title: "Báo cáo KPI"
+                      ownerUserId: 22
+                      durationMinutes: 20
+                    - title: "Biểu quyết kế hoạch"
+                      ownerUserId: 11
+                      durationMinutes: 30
+                  documents:
+                    - name: "ChuongTrinhHop.pdf"
+                      fileKey: "s3://bucket/meeting/abc/ChuongTrinhHop.pdf"
+                      mimeType: "application/pdf"
+                      sizeBytes: 523123
+                      permissions:
+                        canDownload: true
+                        canShare: false
       responses:
         "201":
           description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeetingDetail"
+              examples:
+                sample:
+                  value:
+                    id: 101
+                    title: "Họp tuần"
+                    startTime: "2026-02-02T09:00:00+07:00"
+                    endTime: "2026-02-02T10:30:00+07:00"
+                    location: "Phòng họp A"
+                    description: "Họp rà soát tiến độ"
+                    status: "DRAFT"
+                    createdAt: "2026-01-26T11:00:00+07:00"
+                    participants:
+                      - userId: 11
+                        displayName: "Nguyễn Văn A"
+                        roleInMeeting: "CHAIR"
+                        rsvpStatus: "PENDING"
+                      - userId: 22
+                        displayName: "Trần Thị B"
+                        roleInMeeting: "SECRETARY"
+                        rsvpStatus: "PENDING"
+                      - userId: 33
+                        displayName: "Lê Văn C"
+                        roleInMeeting: "MEMBER"
+                        rsvpStatus: "PENDING"
+                    agendaItems:
+                      - id: 1001
+                        title: "Báo cáo KPI"
+                        ownerUserId: 22
+                        durationMinutes: 20
+                        status: "NOT_STARTED"
+                      - id: 1002
+                        title: "Biểu quyết kế hoạch"
+                        ownerUserId: 11
+                        durationMinutes: 30
+                        status: "NOT_STARTED"
+                    documents:
+                      - id: 501
+                        name: "ChuongTrinhHop.pdf"
+                        mimeType: "application/pdf"
+                        sizeBytes: 523123
+                        permissions:
+                          canDownload: true
+                          canShare: false
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+components:
+  schemas:
+    CreateMeetingRequest:
+      type: object
+      required: [title, startTime, endTime, participants]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        location:
+          type: string
+          maxLength: 200
+          nullable: true
+        description:
+          type: string
+          maxLength: 2000
+          nullable: true
+
+        participants:
+          type: array
+          minItems: 1
+          description: Must include at least one CHAIR.
+          items:
+            $ref: "#/components/schemas/CreateParticipant"
+
+        agendaItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreateAgendaItem"
+
+        documents:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreateDocumentMeta"
+
+    CreateParticipant:
+      type: object
+      required: [userId, roleInMeeting]
+      properties:
+        userId:
+          type: integer
+          format: int64
+        roleInMeeting:
+          type: string
+          enum: [CHAIR, SECRETARY, MEMBER]
+
+    CreateAgendaItem:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 300
+        ownerUserId:
+          type: integer
+          format: int64
+          nullable: true
+        durationMinutes:
+          type: integer
+          minimum: 1
+          maximum: 600
+          nullable: true
+
+    CreateDocumentMeta:
+      type: object
+      required: [name, fileKey, mimeType, sizeBytes]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        fileKey:
+          type: string
+          description: Storage key or URL reference (e.g., S3 key). For demo only.
+          example: "s3://bucket/path/file.pdf"
+        mimeType:
+          type: string
+          example: "application/pdf"
+        sizeBytes:
+          type: integer
+          format: int64
+          minimum: 1
+        permissions:
+          $ref: "#/components/schemas/DocumentPermissions"
+
+    MeetingDetail:
+      type: object
+      required: [id, title, startTime, endTime, status, createdAt, participants]
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        location:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [DRAFT, SENT, IN_PROGRESS, ENDED, CANCELLED]
+        createdAt:
+          type: string
+          format: date-time
+        participants:
+          type: array
+          items:
+            $ref: "#/components/schemas/Participant"
+        agendaItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/AgendaItem"
+        documents:
+          type: array
+          items:
+            $ref: "#/components/schemas/Document"
+
+    Participant:
+      type: object
+      required: [userId, displayName, roleInMeeting, rsvpStatus]
+      properties:
+        userId:
+          type: integer
+          format: int64
+        displayName:
+          type: string
+        roleInMeeting:
+          type: string
+          enum: [CHAIR, SECRETARY, MEMBER]
+        rsvpStatus:
+          type: string
+          enum: [PENDING, ACCEPTED, DECLINED]
+
+    AgendaItem:
+      type: object
+      required: [id, title, status]
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        ownerUserId:
+          type: integer
+          format: int64
+          nullable: true
+        durationMinutes:
+          type: integer
+          nullable: true
+        status:
+          type: string
+          enum: [NOT_STARTED, RUNNING, CLOSED]
+
+    DocumentPermissions:
+      type: object
+      required: [canDownload, canShare]
+      properties:
+        canDownload:
+          type: boolean
+          example: true
+        canShare:
+          type: boolean
+          example: false
+
+    Document:
+      type: object
+      required: [id, name, mimeType, sizeBytes, permissions]
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        mimeType:
+          type: string
+        sizeBytes:
+          type: integer
+          format: int64
+        permissions:
+          $ref: "#/components/schemas/DocumentPermissions"
+
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          example: "Invalid request"
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorDetail"
+
+    ErrorDetail:
+      type: object
+      required: [field, issue]
+      properties:
+        field:
+          type: string
+          example: "participants"
+        issue:
+          type: string
+          example: "must include at least one CHAIR"
+
+  responses:
+    BadRequest:
+      description: Bad Request (validation or malformed payload)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            sample:
+              value:
+                code: "VALIDATION_ERROR"
+                message: "Invalid request"
+                details:
+                  - field: "participants"
+                    issue: "must include at least one CHAIR"
+    Unauthorized:
+      description: Missing/invalid authentication
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            sample:
+              value:
+                code: "UNAUTHORIZED"
+                message: "Authentication required"
+    Forbidden:
+      description: Authenticated but not allowed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            sample:
+              value:
+                code: "FORBIDDEN"
+                message: "You do not have permission"
